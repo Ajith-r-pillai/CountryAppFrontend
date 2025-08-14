@@ -1,54 +1,54 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 import api from "../services/api";
-import { toast } from "react-toastify";
 
-export const login = createAsyncThunk("auth/login", async (data, thunkAPI) => {
-  try {
-    const res = await api.post("/auth/login", data);
-    toast.success("Logged in successfully");
-    return res.data;
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Login failed");
-    return thunkAPI.rejectWithValue(err.response?.data?.message);
-  }
-});
-
-export const register = createAsyncThunk("auth/register", async (data, thunkAPI) => {
-  try {
-    const res = await api.post("/auth/register", data);
-    toast.success("Registered successfully");
-    return res.data;
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Registration failed");
-    return thunkAPI.rejectWithValue(err.response?.data?.message);
-  }
-});
-
+// Example: load user from API
 export const loadUser = createAsyncThunk("auth/loadUser", async (_, thunkAPI) => {
   try {
-    const res = await api.get("/auth/getme");
-    return res.data;
+    const { data } = await api.get("/auth/getme");
+    return data;
   } catch (err) {
-    // We don't toast here to avoid spamming on every page load when not logged in
-    return thunkAPI.rejectWithValue(err.response?.data?.message);
+    return thunkAPI.rejectWithValue(err.response?.data?.message || "Failed to load user");
   }
 });
 
-export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
+export const login = createAsyncThunk("auth/login", async (credentials, thunkAPI) => {
   try {
-    const res = await api.post("/auth/logout");
-    toast.success("Logged out successfully");
-    return res.data;
+    const { data } = await api.post("/auth/login", credentials);
+    localStorage.setItem("user", JSON.stringify(data));
+    return data;
   } catch (err) {
-    toast.error("Logout failed");
-    return thunkAPI.rejectWithValue(err.response?.data?.message);
+    return thunkAPI.rejectWithValue(err.response?.data?.message || "Login failed");
   }
+});
+
+export const register = createAsyncThunk("auth/register", async (formData, thunkAPI) => {
+  try {
+    const { data } = await api.post("/auth/register", formData);
+    localStorage.setItem("user", JSON.stringify(data));
+    return data;
+  } catch (err) {
+    return thunkAPI.rejectWithValue(err.response?.data?.message || "Registration failed");
+  }
+});
+
+export const logout = createAsyncThunk("auth/logout", async () => {
+  await api.post("/auth/logout");
+  localStorage.removeItem("user");
 });
 
 const authSlice = createSlice({
   name: "auth",
-  initialState: { user: null, status: "idle" },
-  reducers: {},
+  initialState: {
+    user: null,
+    status: "idle",
+  },
+  reducers: {
+    setUserFromStorage: (state, action) => {
+      state.user = action.payload;
+      state.status = "succeeded";
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loadUser.pending, (state) => {
@@ -77,5 +77,5 @@ const authSlice = createSlice({
   },
 });
 
-
+export const { setUserFromStorage } = authSlice.actions;
 export default authSlice.reducer;
