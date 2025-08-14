@@ -59,18 +59,68 @@ export default function CountryList() {
     return () => clearInterval(interval);
   }, [list, visibleCount]);
 
-  if (status === "loading" && list.length === 0) return <p>Loading...</p>;
+  if (status === "loading" && list.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 text-lg">Discovering countries...</p>
+      </div>
+    );
+  }
+
+  if (list.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="mb-4 text-6xl">🌍</div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">No countries found</h3>
+        <p className="text-gray-600">Try adjusting your search filters</p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Found {list.length} countries
+        </h2>
+        <div className="text-sm text-gray-600">
+          Showing {Math.min(visibleCount, list.length)} countries
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {list.slice(0, visibleCount).map((country) => (
-          <Link key={country.cca2} to={`/country/${country.cca2}`}>
-            <CountryCard country={{ ...country, currentTime: timeMap[country.cca2] }} />
+          <Link 
+            key={country.cca2} 
+            to={`/country/${country.cca2}`}
+            className="group block transform transition-all duration-200 hover:scale-[1.02]"
+          >
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden group-hover:shadow-xl transition-all duration-200">
+              <CountryCard country={{ ...country, currentTime: timeMap[country.cca2] }} />
+            </div>
           </Link>
         ))}
       </div>
-      <div ref={loader} className="h-10"></div>
-    </>
+
+      {/* Loading indicator for infinite scroll */}
+      {status === "loading" && list.length > 0 && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+          <span className="text-gray-600">Loading more countries...</span>
+        </div>
+      )}
+
+      {/* Infinite scroll trigger */}
+      <div ref={loader} className="h-4"></div>
+
+      {/* End of results indicator */}
+      {offset >= 250 && (
+        <div className="text-center py-8 text-gray-500">
+          <div className="mb-2">🎉</div>
+          <p>You've explored all available countries!</p>
+        </div>
+      )}
+    </div>
   );
 }

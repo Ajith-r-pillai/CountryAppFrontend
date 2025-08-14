@@ -1,14 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import { toast } from "react-toastify";
 import api from "../services/api";
 
-// Example: load user from API
+// Load current user from server (cookie-based)
 export const loadUser = createAsyncThunk("auth/loadUser", async (_, thunkAPI) => {
   try {
     const { data } = await api.get("/auth/getme");
     return data;
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || "Failed to load user");
+    return thunkAPI.rejectWithValue(err.response?.data?.message || null);
   }
 });
 
@@ -16,9 +16,12 @@ export const login = createAsyncThunk("auth/login", async (credentials, thunkAPI
   try {
     const { data } = await api.post("/auth/login", credentials);
     localStorage.setItem("user", JSON.stringify(data));
+    toast.success("Logged in successfully ");
     return data;
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || "Login failed");
+    const errorMsg = err.response?.data?.message || "Login failed ";
+    toast.error(errorMsg);
+    return thunkAPI.rejectWithValue(errorMsg);
   }
 });
 
@@ -26,22 +29,31 @@ export const register = createAsyncThunk("auth/register", async (formData, thunk
   try {
     const { data } = await api.post("/auth/register", formData);
     localStorage.setItem("user", JSON.stringify(data));
+    toast.success("Registered successfully 🎉");
     return data;
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || "Registration failed");
+    const errorMsg = err.response?.data?.message || "Registration failed ";
+    toast.error(errorMsg);
+    return thunkAPI.rejectWithValue(errorMsg);
   }
 });
 
-export const logout = createAsyncThunk("auth/logout", async () => {
-  await api.post("/auth/logout");
-  localStorage.removeItem("user");
+export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
+  try {
+    await api.post("/auth/logout"); // clears cookie on backend
+    localStorage.removeItem("user");
+    toast.info("Logged out successfully ");
+  } catch (err) {
+    toast.error("Failed to log out ");
+    return thunkAPI.rejectWithValue("Logout failed");
+  }
 });
 
 const authSlice = createSlice({
   name: "auth",
   initialState: {
     user: null,
-    status: "idle",
+    status: "loading", // start in loading so ProtectedRoute waits
   },
   reducers: {
     setUserFromStorage: (state, action) => {
